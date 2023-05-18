@@ -1,5 +1,5 @@
 import React, {useEffect, useState} from 'react';
-import {View} from 'react-native';
+import {View, Text} from 'react-native';
 import {FlatList} from 'react-native';
 import FileViewer from 'react-native-file-viewer';
 import {
@@ -10,19 +10,56 @@ import {
   MD3Colors,
 } from 'react-native-paper';
 import RNFS, {ReadDirItem} from 'react-native-fs';
+import RNFetchBlob from 'rn-fetch-blob';
 
-import {bytesToMB} from '../utils';
+import {bytesToMB, getFileExtension, getFileName} from '../utils';
+import {ShareFile, useGetShare} from '../hooks/useGetShare';
+import {DEV_API_URL} from '../constants';
 
 export const AUDIOBOOKSPATH = `${RNFS.ExternalDirectoryPath}/audiobooks`;
 
 export default function FileView() {
-  const [fileView, setFileView] = useState<ReadDirItem[]>([]);
+  const [fileView, setFileView] = useState<Array<ReadDirItem>>([]);
+  const [loading, setLoading] = useState(false);
+  const shareFiles: Array<ShareFile> = useGetShare();
 
   useEffect(() => {
     setupAndReadAudiobooksDir();
-  }, []);
+  }, [shareFiles]);
 
-  const readAudiobooksDir = async (path: string): Promise<void> => {
+  const convertIntentData = async () => {
+    try {
+      const conversionUrl = `${DEV_API_URL}/convert`;
+      const intentData: ShareFile = shareFiles[0];
+      if (intentData.weblink) {
+        let formattedUrl = intentData.weblink.replace(/^https?:\/\//, '');
+        // Replace slashes with hyphens
+        formattedUrl = formattedUrl.replace(/\//g, '-');
+        const downloadPath = `${AUDIOBOOKSPATH}/${formattedUrl}.mp3`;
+        const jsonBody = {link: intentData.weblink};
+        console.log(intentData.weblink);
+        setLoading(true);
+        const res = await RNFetchBlob.config({
+          path: downloadPath,
+          timeout: 20_000,
+        }).fetch(
+          'POST',
+          conversionUrl,
+          {
+            'Content-Type': 'application/json',
+          },
+          JSON.stringify(jsonBody),
+        );
+        setLoading(false);
+        console.log(`Downloaded file to: ${res.path()}`);
+      } else {
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const readAudiobooksDir = async (path: string) => {
     try {
       const data = await RNFS.readDir(path);
       setFileView(data);
@@ -31,9 +68,13 @@ export default function FileView() {
     }
   };
 
-  const setupAndReadAudiobooksDir = async (): Promise<void> => {
+  const setupAndReadAudiobooksDir = async () => {
     try {
       await RNFS.mkdir(AUDIOBOOKSPATH);
+      if (shareFiles.length > 0) {
+        console.log('Processing...', shareFiles[0]);
+        await convertIntentData();
+      }
       await readAudiobooksDir(AUDIOBOOKSPATH);
     } catch (err) {
       console.error(err);
@@ -50,7 +91,7 @@ export default function FileView() {
   };
 
   const handlePlay = (item: ReadDirItem) => async () => {
-    console.log(item.path);
+    console.log(`Path of file: ${item.path}`);
     try {
       await FileViewer.open(item.path, {showOpenWithDialog: true});
       console.log('Success');
@@ -63,11 +104,11 @@ export default function FileView() {
     const LeftContent = (props: {size: number}) => (
       <Avatar.Icon {...props} icon="book-music" />
     );
-    return item.isFile() && item.name.split('.').pop() === 'mp3' ? (
+    return item.isFile() && getFileExtension(item.name) === 'mp3' ? (
       <Card mode="elevated">
         <Card.Title title="Audiobook" left={LeftContent} />
         <Card.Content>
-          <PaperText variant="titleMedium">{item.name.split('.')[0]}</PaperText>
+          <PaperText variant="titleMedium">{item.name}</PaperText>
           <PaperText variant="bodySmall">{item.mtime?.toUTCString()}</PaperText>
           <PaperText variant="bodySmall">{bytesToMB(item.size)}</PaperText>
         </Card.Content>
@@ -90,12 +131,16 @@ export default function FileView() {
       </Card>
     ) : null;
   };
-  return (
+  return !loading ? (
     <FlatList
       data={fileView}
       renderItem={renderFileView}
       keyExtractor={(item: ReadDirItem) => item.path}
       ItemSeparatorComponent={() => <View style={{height: 10}} />}
     />
+  ) : (
+    <View>
+      <Text>Loading...</Text>
+    </View>
   );
 }
