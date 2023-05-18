@@ -3,5 +3,9 @@ export const bytesToMB = (bytes: number) => {
   return megabytes.toFixed(2) + ' MB';
 };
 
-export const getFileName = (filename: string) => filename.split('.')[0];
+export const getFileName = (filename: string) => {
+  let fsplit = filename.split('.');
+  fsplit.pop();
+  return fsplit.join('.');
+};
 export const getFileExtension = (filename: string) => filename.split('.').pop();

@@ -1,5 +1,5 @@
 import React, {useEffect, useState} from 'react';
-import {View, Text} from 'react-native';
+import {View} from 'react-native';
 import {FlatList} from 'react-native';
 import FileViewer from 'react-native-file-viewer';
 import {
@@ -8,40 +8,54 @@ import {
   Avatar,
   IconButton,
   MD3Colors,
+  ProgressBar,
 } from 'react-native-paper';
 import RNFS, {ReadDirItem} from 'react-native-fs';
 import RNFetchBlob from 'rn-fetch-blob';
+import ReceiveSharingIntent from 'react-native-receive-sharing-intent';
 
 import {bytesToMB, getFileExtension, getFileName} from '../utils';
-import {ShareFile, useGetShare} from '../hooks/useGetShare';
 import {DEV_API_URL} from '../constants';
+
+export interface ShareFile {
+  filePath?: string;
+  text?: string;
+  weblink?: string;
+  mimeType?: string;
+  contentUri?: string;
+  fileName?: string;
+  extension?: string;
+}
 
 export const AUDIOBOOKSPATH = `${RNFS.ExternalDirectoryPath}/audiobooks`;
 
 export default function FileView() {
+  console.log('re-rendering fileview');
   const [fileView, setFileView] = useState<Array<ReadDirItem>>([]);
   const [loading, setLoading] = useState(false);
-  const shareFiles: Array<ShareFile> = useGetShare();
-
+  // console.log(shareFiles);
   useEffect(() => {
     setupAndReadAudiobooksDir();
-  }, [shareFiles]);
+  }, []);
 
-  const convertIntentData = async () => {
+  const convertIntentData = async (shareFiles: ShareFile[]) => {
     try {
       const conversionUrl = `${DEV_API_URL}/convert`;
-      const intentData: ShareFile = shareFiles[0];
-      if (intentData.weblink) {
-        let formattedUrl = intentData.weblink.replace(/^https?:\/\//, '');
+      const intentData: ShareFile | undefined = shareFiles.pop();
+      if (intentData?.weblink) {
+        let formattedUrl = intentData.weblink.replace(
+          /^(https?:\/\/)?(www\.)?/,
+          '',
+        );
         // Replace slashes with hyphens
-        formattedUrl = formattedUrl.replace(/\//g, '-');
+        formattedUrl = formattedUrl.replace(/\//g, '-').substring(0, 30);
         const downloadPath = `${AUDIOBOOKSPATH}/${formattedUrl}.mp3`;
         const jsonBody = {link: intentData.weblink};
         console.log(intentData.weblink);
         setLoading(true);
         const res = await RNFetchBlob.config({
           path: downloadPath,
-          timeout: 20_000,
+          timeout: 50_000,
         }).fetch(
           'POST',
           conversionUrl,
@@ -52,6 +66,7 @@ export default function FileView() {
         );
         setLoading(false);
         console.log(`Downloaded file to: ${res.path()}`);
+        // await readAudiobooksDir(AUDIOBOOKSPATH);
       } else {
       }
     } catch (err) {
@@ -71,10 +86,18 @@ export default function FileView() {
   const setupAndReadAudiobooksDir = async () => {
     try {
       await RNFS.mkdir(AUDIOBOOKSPATH);
-      if (shareFiles.length > 0) {
-        console.log('Processing...', shareFiles[0]);
-        await convertIntentData();
-      }
+      ReceiveSharingIntent.getReceivedFiles(
+        (newfiles: Array<ShareFile>) => {
+          // files returns as JSON Array example
+          //[{ filePath: null, text: null, weblink: null, mimeType: null, contentUri: null, fileName: null, extension: null }]
+          console.log(newfiles);
+          if (newfiles) convertIntentData(newfiles);
+        },
+        (error: any) => {
+          console.log(error);
+        },
+        'InstaAudioMedia', // share url protocol (must be unique to your app, suggest using your apple bundle id)
+      );
       await readAudiobooksDir(AUDIOBOOKSPATH);
     } catch (err) {
       console.error(err);
@@ -106,9 +129,9 @@ export default function FileView() {
     );
     return item.isFile() && getFileExtension(item.name) === 'mp3' ? (
       <Card mode="elevated">
-        <Card.Title title="Audiobook" left={LeftContent} />
+        <Card.Title title="Audio" left={LeftContent} />
         <Card.Content>
-          <PaperText variant="titleMedium">{item.name}</PaperText>
+          <PaperText variant="titleMedium">{getFileName(item.name)}</PaperText>
           <PaperText variant="bodySmall">{item.mtime?.toUTCString()}</PaperText>
           <PaperText variant="bodySmall">{bytesToMB(item.size)}</PaperText>
         </Card.Content>
@@ -140,7 +163,7 @@ export default function FileView() {
     />
   ) : (
     <View>
-      <Text>Loading...</Text>
+      <ProgressBar progress={0.5} color={MD3Colors.error50} />
     </View>
   );
 }

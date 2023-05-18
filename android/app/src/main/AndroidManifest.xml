@@ -4,7 +4,6 @@
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"/>
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"/>
-    <uses-permission android:name="android.permission.DOWNLOAD_WITHOUT_NOTIFICATION" />
 
     <application
       android:name=".MainApplication"
@@ -27,15 +26,18 @@
             <category android:name="android.intent.category.LAUNCHER" />
         </intent-filter>
         <intent-filter>
-            <action android:name="android.intent.action.SEND" />
+            <action android:name="android.intent.action.VIEW" />
             <category android:name="android.intent.category.DEFAULT" />
-            <data android:mimeType="*/*" />
+            <category android:name="android.intent.category.BROWSABLE" />
+            <data android:scheme="http" />
+            <data android:scheme="https" />
         </intent-filter>
         <intent-filter>
-            <action android:name="android.intent.action.SEND_MULTIPLE" />
+            <action android:name="android.intent.action.SEND" />
             <category android:name="android.intent.category.DEFAULT" />
-            <data android:mimeType="*/*" />
-          </intent-filter>
+            <data android:mimeType="text/plain" />
+            <data android:mimeType="application/pdf" />
+        </intent-filter>
       </activity>
     </application>
 </manifest>
