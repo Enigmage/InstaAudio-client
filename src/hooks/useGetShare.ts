@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import ReceiveSharingIntent from 'react-native-receive-sharing-intent';
 
-export interface ShareFile {
+interface ShareFile {
   filePath?: string;
   text?: string;
   weblink?: string;

@@ -9,13 +9,17 @@ import {
   IconButton,
   MD3Colors,
   ProgressBar,
+  Button,
 } from 'react-native-paper';
 import RNFS, {ReadDirItem} from 'react-native-fs';
 import RNFetchBlob from 'rn-fetch-blob';
 import ReceiveSharingIntent from 'react-native-receive-sharing-intent';
+import DocumentPicker, {
+  DocumentPickerResponse,
+} from 'react-native-document-picker';
 
 import {bytesToMB, getFileExtension, getFileName} from '../utils';
-import {DEV_API_URL} from '../constants';
+import {DEV_API_URL, AUDIOBOOKSPATH, MIMETYPES} from '../constants';
 
 export interface ShareFile {
   filePath?: string;
@@ -27,8 +31,6 @@ export interface ShareFile {
   extension?: string;
 }
 
-export const AUDIOBOOKSPATH = `${RNFS.ExternalDirectoryPath}/audiobooks`;
-
 export default function FileView() {
   console.log('re-rendering fileview');
   const [fileView, setFileView] = useState<Array<ReadDirItem>>([]);
@@ -39,38 +41,65 @@ export default function FileView() {
   }, []);
 
   const convertIntentData = async (shareFiles: ShareFile[]) => {
-    try {
-      const conversionUrl = `${DEV_API_URL}/convert`;
-      const intentData: ShareFile | undefined = shareFiles.pop();
-      if (intentData?.weblink) {
-        let formattedUrl = intentData.weblink.replace(
-          /^(https?:\/\/)?(www\.)?/,
-          '',
-        );
-        // Replace slashes with hyphens
-        formattedUrl = formattedUrl.replace(/\//g, '-').substring(0, 30);
-        const downloadPath = `${AUDIOBOOKSPATH}/${formattedUrl}.mp3`;
-        const jsonBody = {link: intentData.weblink};
-        console.log(intentData.weblink);
-        setLoading(true);
-        const res = await RNFetchBlob.config({
-          path: downloadPath,
-          timeout: 50_000,
-        }).fetch(
-          'POST',
-          conversionUrl,
-          {
-            'Content-Type': 'application/json',
-          },
-          JSON.stringify(jsonBody),
-        );
-        setLoading(false);
-        console.log(`Downloaded file to: ${res.path()}`);
-        // await readAudiobooksDir(AUDIOBOOKSPATH);
-      } else {
+    const intentData: ShareFile | undefined = shareFiles.pop();
+    if (intentData) {
+      try {
+        if (intentData.weblink) {
+          const conversionUrl = `${DEV_API_URL}/convert-url`;
+          let formattedUrl = intentData.weblink.replace(
+            /^(https?:\/\/)?(www\.)?/,
+            '',
+          );
+          // Replace slashes with hyphens
+          formattedUrl = formattedUrl.replace(/\//g, '-').substring(0, 30);
+          const downloadPath = `${AUDIOBOOKSPATH}/${formattedUrl}.mp3`;
+          const jsonBody = {link: intentData.weblink};
+          console.log(intentData.weblink);
+          setLoading(true);
+          const res = await RNFetchBlob.config({
+            path: downloadPath,
+            timeout: 50_000,
+          }).fetch(
+            'POST',
+            conversionUrl,
+            {
+              'Content-Type': 'application/json',
+            },
+            JSON.stringify(jsonBody),
+          );
+          setLoading(false);
+          console.log(`Downloaded file to: ${res.path()}`);
+          await readAudiobooksDir(AUDIOBOOKSPATH);
+        } else if (intentData.filePath) {
+          // console.log('Yohoo');
+          const conversionUrl = `${DEV_API_URL}/convert-file`;
+          const downloadPath = `${AUDIOBOOKSPATH}/${
+            intentData.fileName ? intentData.fileName : 'Unknown'
+          }.mp3`;
+          setLoading(true);
+          const res = await RNFetchBlob.config({
+            path: downloadPath,
+            timeout: 50_000,
+          }).fetch(
+            'POST',
+            conversionUrl,
+            {'Content-Type': 'multipart/form-data'},
+            [
+              {
+                name: 'file',
+                filename: intentData.fileName,
+                type: intentData.mimeType,
+                data: RNFetchBlob.wrap(intentData.filePath),
+              },
+            ],
+          );
+          setLoading(false);
+          console.log(`Downloaded file to: ${res.path()}`);
+          await readAudiobooksDir(AUDIOBOOKSPATH);
+        }
+      } catch (err) {
+        console.error(err);
       }
-    } catch (err) {
-      console.error(err);
     }
   };
 
@@ -123,6 +152,35 @@ export default function FileView() {
     }
   };
 
+  const handleConverButton = async () => {
+    try {
+      const resp: DocumentPickerResponse = await DocumentPicker.pickSingle({
+        type: MIMETYPES,
+      });
+      const conversionUrl = `${DEV_API_URL}/convert-file`;
+      const downloadPath = `${AUDIOBOOKSPATH}/${
+        resp.name ? resp.name : 'Unknown'
+      }.mp3`;
+      setLoading(true);
+      const res = await RNFetchBlob.config({
+        path: downloadPath,
+        timeout: 50_000,
+      }).fetch('POST', conversionUrl, {'Content-Type': 'multipart/form-data'}, [
+        {
+          name: 'file',
+          filename: resp.name,
+          type: resp.type,
+          data: RNFetchBlob.wrap(resp.uri),
+        },
+      ]);
+      setLoading(false);
+      console.log(`Downloaded file to: ${res.path()}`);
+      await readAudiobooksDir(AUDIOBOOKSPATH);
+    } catch (_) {
+      console.log('cancelled');
+    }
+  };
+
   const renderFileView = ({item}: {item: ReadDirItem}) => {
     const LeftContent = (props: {size: number}) => (
       <Avatar.Icon {...props} icon="book-music" />
@@ -154,16 +212,28 @@ export default function FileView() {
       </Card>
     ) : null;
   };
-  return !loading ? (
-    <FlatList
-      data={fileView}
-      renderItem={renderFileView}
-      keyExtractor={(item: ReadDirItem) => item.path}
-      ItemSeparatorComponent={() => <View style={{height: 10}} />}
-    />
-  ) : (
-    <View>
-      <ProgressBar progress={0.5} color={MD3Colors.error50} />
-    </View>
+  return (
+    <>
+      <View style={{marginBottom: 10}}>
+        <Button
+          icon="file-image-plus"
+          mode="elevated"
+          onPress={handleConverButton}>
+          Convert File
+        </Button>
+      </View>
+      {!loading ? (
+        <FlatList
+          data={fileView}
+          renderItem={renderFileView}
+          keyExtractor={(item: ReadDirItem) => item.path}
+          ItemSeparatorComponent={() => <View style={{height: 10}} />}
+        />
+      ) : (
+        <View>
+          <ProgressBar progress={0.5} color={MD3Colors.error50} />
+        </View>
+      )}
+    </>
   );
 }
