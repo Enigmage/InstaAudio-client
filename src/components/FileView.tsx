@@ -1,16 +1,16 @@
-import React, {useEffect, useState} from 'react';
-import {View} from 'react-native';
-import {FlatList} from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { View, Platform, PermissionsAndroid, Alert } from 'react-native';
+import { FlatList } from 'react-native';
 import FileViewer from 'react-native-file-viewer';
-import {MD3Colors, ProgressBar, FAB, Menu} from 'react-native-paper';
-import RNFS, {ReadDirItem} from 'react-native-fs';
+import { MD3Colors, ProgressBar, FAB, Menu } from 'react-native-paper';
+import RNFS, { ReadDirItem } from 'react-native-fs';
 import RNFetchBlob from 'rn-fetch-blob';
 import ReceiveSharingIntent from 'react-native-receive-sharing-intent';
 import DocumentPicker, {
   DocumentPickerResponse,
 } from 'react-native-document-picker';
 
-import {DEV_API_URL, AUDIOBOOKSPATH, MIMETYPES} from '../constants';
+import { DEV_API_URL, AUDIOBOOKSPATH, MIMETYPES } from '../constants';
 import FileCard from './FileCard';
 
 export interface ShareFile {
@@ -81,7 +81,7 @@ export default function FileView() {
     const res = await RNFetchBlob.config({
       path: downloadPath,
       timeout: 50_000,
-    }).fetch('POST', conversionUrl, {'Content-Type': 'multipart/form-data'}, [
+    }).fetch('POST', conversionUrl, { 'Content-Type': 'multipart/form-data' }, [
       {
         name: 'file',
         filename: filename,
@@ -106,7 +106,7 @@ export default function FileView() {
           // Replace slashes with hyphens
           formattedUrl = formattedUrl.replace(/\//g, '-').substring(0, 30);
           const downloadPath = `${AUDIOBOOKSPATH}/${formattedUrl}.mp3`;
-          const jsonBody = {url: intentData.weblink};
+          const jsonBody = { url: intentData.weblink };
           // console.log(intentData.weblink);
           setLoading(true);
           const res = await RNFetchBlob.config({
@@ -146,13 +146,47 @@ export default function FileView() {
     }
   };
 
+  const handleRename = async (item: ReadDirItem, newName: string) => {
+    const newPath = `${AUDIOBOOKSPATH}/${newName}.mp3`;
+    const currPath = item.path;
+    await RNFS.moveFile(currPath, newPath);
+    await readAudiobooksDir(AUDIOBOOKSPATH, fileOrder);
+  };
   const handlePlay = (item: ReadDirItem) => async () => {
     // console.log(`Path of file: ${item.path}`);
     try {
-      await FileViewer.open(item.path, {showOpenWithDialog: true});
+      await FileViewer.open(item.path, { showOpenWithDialog: true });
       // console.log('Success');
     } catch (err) {
       console.log(err);
+    }
+  };
+  const handleExport = (item: ReadDirItem) => async () => {
+    if (Platform.OS !== 'android') return;
+    // console.log(Platform.OS);
+    try {
+      const granted = await PermissionsAndroid.request(
+        PermissionsAndroid.PERMISSIONS.WRITE_EXTERNAL_STORAGE,
+        {
+          title: 'Write permission: InstaAudio',
+          message: 'Allow the file to be copied to downloads directory',
+          buttonPositive: 'Allow',
+          buttonNegative: 'Cancel',
+        },
+      );
+      if (granted === PermissionsAndroid.RESULTS.GRANTED) {
+        const currPath = item.path;
+        const newPath = `${RNFS.DownloadDirectoryPath}/${item.name}`;
+        await RNFS.copyFile(currPath, newPath);
+        console.log('exported');
+        Alert.alert('File Exported', '', [{ text: 'OK' }]);
+      } else {
+        console.log('Permission denied');
+      }
+      return;
+    } catch (err) {
+      console.warn(err);
+      return;
     }
   };
 
@@ -179,12 +213,14 @@ export default function FileView() {
     setFileOrder('desc');
   };
 
-  const renderFileView = ({item}: {item: ReadDirItem}) => {
+  const renderFileView = ({ item }: { item: ReadDirItem }) => {
     return (
       <FileCard
         item={item}
         handleDelete={handleDelete}
         handlePlay={handlePlay}
+        handleRename={handleRename}
+        handleExport={handleExport}
       />
     );
   };
@@ -195,7 +231,7 @@ export default function FileView() {
           data={fileView}
           renderItem={renderFileView}
           keyExtractor={(item: ReadDirItem) => item.path}
-          ItemSeparatorComponent={() => <View style={{height: 10}} />}
+          ItemSeparatorComponent={() => <View style={{ height: 10 }} />}
         />
       ) : (
         <ProgressBar animatedValue={0.5} color={MD3Colors.error50} />
@@ -230,12 +266,12 @@ export default function FileView() {
             }>
             <Menu.Item
               leadingIcon="sort-bool-ascending"
-              title="First Modified"
+              title="Oldest first"
               onPress={sortAscending}
             />
             <Menu.Item
               leadingIcon="sort-bool-descending"
-              title="Last Modified"
+              title="Newest first"
               onPress={sortDescending}
             />
           </Menu>
