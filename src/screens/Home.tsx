@@ -1,5 +1,5 @@
-import {View, StyleSheet} from 'react-native';
-import {useTheme} from 'react-native-paper';
+import { View, StyleSheet } from 'react-native';
+import { useTheme } from 'react-native-paper';
 import FileView from '../components/FileView';
 // import PickerButton from '../components/PickerButton';
 import AppTitle from '../components/Title';
@@ -7,7 +7,7 @@ import AppTitle from '../components/Title';
 export default function Home(): JSX.Element {
   const theme = useTheme();
   return (
-    <View style={[styles.main, {backgroundColor: theme.colors.background}]}>
+    <View style={[styles.main, { backgroundColor: theme.colors.background }]}>
       <View style={styles.titleView}>
         <AppTitle />
       </View>
@@ -32,9 +32,9 @@ const styles = StyleSheet.create({
     fontSize: 30,
   },
   filesView: {
-    marginTop: 5,
+    marginTop: 10,
     marginLeft: 10,
     marginRight: 10,
-    flex: 8,
+    flex: 9,
   },
 });

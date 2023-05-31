@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { View, Platform, PermissionsAndroid, Alert } from 'react-native';
 import { FlatList } from 'react-native';
 import FileViewer from 'react-native-file-viewer';
-import { MD3Colors, ProgressBar, FAB, Menu } from 'react-native-paper';
+import { MD3Colors, ProgressBar } from 'react-native-paper';
 import RNFS, { ReadDirItem } from 'react-native-fs';
 import RNFetchBlob from 'rn-fetch-blob';
 import ReceiveSharingIntent from 'react-native-receive-sharing-intent';
@@ -12,6 +12,7 @@ import DocumentPicker, {
 
 import { DEV_API_URL, AUDIOBOOKSPATH, MIMETYPES } from '../constants';
 import FileCard from './FileCard';
+import BottomBar from './BottomBar';
 
 export interface ShareFile {
   filePath?: string;
@@ -27,7 +28,6 @@ export default function FileView() {
   // console.log('re-rendering fileview');
   const [fileView, setFileView] = useState<Array<ReadDirItem>>([]);
   const [loading, setLoading] = useState(false);
-  const [visibleSortMenu, setVisibleSortMenu] = useState(false);
   const [fileOrder, setFileOrder] = useState<'asc' | 'desc'>('desc');
   // console.log(shareFiles);
   useEffect(() => {
@@ -93,44 +93,42 @@ export default function FileView() {
     console.log(`Downloaded file to: ${res.path()}`);
   };
 
+  const convertUrl = async (url: string): Promise<void> => {
+    const conversionUrl = `${DEV_API_URL}/convert-url`;
+    let formattedUrl = url.replace(/^(https?:\/\/)?(www\.)?/, '');
+    // Replace slashes with hyphens
+    formattedUrl = formattedUrl.replace(/\//g, '-').substring(0, 30);
+    const downloadPath = `${AUDIOBOOKSPATH}/${formattedUrl}.mp3`;
+    const jsonBody = { url };
+    setLoading(true);
+    const res = await RNFetchBlob.config({
+      path: downloadPath,
+      timeout: 50_000,
+    }).fetch(
+      'POST',
+      conversionUrl,
+      {
+        'Content-Type': 'application/json',
+      },
+      JSON.stringify(jsonBody),
+    );
+    setLoading(false);
+    console.log(`Downloaded file to: ${res.path()}`);
+    await readAudiobooksDir(AUDIOBOOKSPATH, fileOrder);
+  };
+
   const convertIntentData = async (shareFiles: ShareFile[]) => {
     const intentData: ShareFile | undefined = shareFiles.pop();
     if (intentData) {
       try {
-        if (intentData.weblink) {
-          const conversionUrl = `${DEV_API_URL}/convert-url`;
-          let formattedUrl = intentData.weblink.replace(
-            /^(https?:\/\/)?(www\.)?/,
-            '',
-          );
-          // Replace slashes with hyphens
-          formattedUrl = formattedUrl.replace(/\//g, '-').substring(0, 30);
-          const downloadPath = `${AUDIOBOOKSPATH}/${formattedUrl}.mp3`;
-          const jsonBody = { url: intentData.weblink };
-          // console.log(intentData.weblink);
-          setLoading(true);
-          const res = await RNFetchBlob.config({
-            path: downloadPath,
-            timeout: 50_000,
-          }).fetch(
-            'POST',
-            conversionUrl,
-            {
-              'Content-Type': 'application/json',
-            },
-            JSON.stringify(jsonBody),
-          );
-          setLoading(false);
-          console.log(`Downloaded file to: ${res.path()}`);
-          await readAudiobooksDir(AUDIOBOOKSPATH, fileOrder);
-        } else if (intentData.filePath) {
+        if (intentData.weblink) await convertUrl(intentData.weblink);
+        else if (intentData.filePath)
           await convertFile(
             intentData.filePath,
             intentData.fileName || 'Unknown',
             intentData.mimeType || '',
           );
-          await readAudiobooksDir(AUDIOBOOKSPATH, fileOrder);
-        }
+        await readAudiobooksDir(AUDIOBOOKSPATH, fileOrder);
       } catch (err) {
         console.error(err);
       }
@@ -202,8 +200,6 @@ export default function FileView() {
     }
   };
 
-  const openSortMenu = () => setVisibleSortMenu(true);
-  const closeSortMenu = () => setVisibleSortMenu(false);
   const sortAscending = async () => {
     await readAudiobooksDir(AUDIOBOOKSPATH, 'asc');
     setFileOrder('asc');
@@ -224,59 +220,21 @@ export default function FileView() {
       />
     );
   };
+  if (loading)
+    return <ProgressBar animatedValue={0.5} color={MD3Colors.error50} />;
   return (
     <>
-      {!loading ? (
-        <FlatList
-          data={fileView}
-          renderItem={renderFileView}
-          keyExtractor={(item: ReadDirItem) => item.path}
-          ItemSeparatorComponent={() => <View style={{ height: 10 }} />}
-        />
-      ) : (
-        <ProgressBar animatedValue={0.5} color={MD3Colors.error50} />
-      )}
-      {!loading && (
-        <View
-          style={{
-            display: 'flex',
-            flexDirection: 'row-reverse',
-            justifyContent: 'center',
-            alignItems: 'center',
-          }}>
-          <FAB
-            icon="file-image-plus"
-            onPress={handleConvertButton}
-            style={{
-              margin: 16,
-            }}
-          />
-          <Menu
-            visible={visibleSortMenu}
-            onDismiss={closeSortMenu}
-            anchorPosition="top"
-            anchor={
-              <FAB
-                icon="sort"
-                onPress={openSortMenu}
-                style={{
-                  margin: 16,
-                }}
-              />
-            }>
-            <Menu.Item
-              leadingIcon="sort-bool-ascending"
-              title="Oldest first"
-              onPress={sortAscending}
-            />
-            <Menu.Item
-              leadingIcon="sort-bool-descending"
-              title="Newest first"
-              onPress={sortDescending}
-            />
-          </Menu>
-        </View>
-      )}
+      <FlatList
+        data={fileView}
+        renderItem={renderFileView}
+        keyExtractor={(item: ReadDirItem) => item.path}
+        ItemSeparatorComponent={() => <View style={{ height: 10 }} />}
+      />
+      <BottomBar
+        sortAscending={sortAscending}
+        sortDescending={sortDescending}
+        handleConvertButton={handleConvertButton}
+      />
     </>
   );
 }
