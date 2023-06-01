@@ -5,24 +5,15 @@ import FileViewer from 'react-native-file-viewer';
 import { MD3Colors, ProgressBar } from 'react-native-paper';
 import RNFS, { ReadDirItem } from 'react-native-fs';
 import RNFetchBlob from 'rn-fetch-blob';
-import ReceiveSharingIntent from 'react-native-receive-sharing-intent';
 import DocumentPicker, {
   DocumentPickerResponse,
 } from 'react-native-document-picker';
 
 import { DEV_API_URL, AUDIOBOOKSPATH, MIMETYPES } from '../constants';
+import { recieveSharingIntentInit, ShareFile } from '../receiveSharingIntent';
 import FileCard from './FileCard';
 import BottomBar from './BottomBar';
-
-export interface ShareFile {
-  filePath?: string;
-  text?: string;
-  weblink?: string;
-  mimeType?: string;
-  contentUri?: string;
-  fileName?: string;
-  extension?: string;
-}
+import { sortByMtime } from '../utils';
 
 export default function FileView() {
   // console.log('re-rendering fileview');
@@ -37,18 +28,7 @@ export default function FileView() {
   const setupAndReadAudiobooksDir = async () => {
     try {
       await RNFS.mkdir(AUDIOBOOKSPATH);
-      ReceiveSharingIntent.getReceivedFiles(
-        (newfiles: Array<ShareFile>) => {
-          // files returns as JSON Array example
-          //[{ filePath: null, text: null, weblink: null, mimeType: null, contentUri: null, fileName: null, extension: null }]
-          console.log(newfiles);
-          if (newfiles) convertIntentData(newfiles);
-        },
-        (error: any) => {
-          console.log(error);
-        },
-        'InstaAudioMedia', // share url protocol (must be unique to your app, suggest using your apple bundle id)
-      );
+      recieveSharingIntentInit(convertIntentData);
       await readAudiobooksDir(AUDIOBOOKSPATH, fileOrder);
     } catch (err) {
       console.error(err);
@@ -57,15 +37,7 @@ export default function FileView() {
   const readAudiobooksDir = async (path: string, sortOrder: 'asc' | 'desc') => {
     try {
       const data = await RNFS.readDir(path);
-      const sortedData = data.sort((a, b) => {
-        const dA = new Date(`${a.mtime}`).valueOf();
-        const dB = new Date(`${b.mtime}`).valueOf();
-        if (dA > dB) {
-          return sortOrder === 'asc' ? 1 : -1;
-        }
-        return sortOrder === 'asc' ? -1 : 1;
-      });
-      setFileView(sortedData);
+      setFileView(data.sort(sortByMtime(sortOrder)));
     } catch (err) {
       console.error(err);
     }
@@ -177,7 +149,7 @@ export default function FileView() {
         const newPath = `${RNFS.DownloadDirectoryPath}/${item.name}`;
         await RNFS.copyFile(currPath, newPath);
         console.log('exported');
-        Alert.alert('File Exported', '', [{ text: 'OK' }]);
+        Alert.alert('File Exported to Downloads.', '', [{ text: 'OK' }]);
       } else {
         console.log('Permission denied');
       }
