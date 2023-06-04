@@ -10,14 +10,14 @@ export interface ShareFile {
   extension?: string;
 }
 
-export const recieveSharingIntentInit = (
-  success: (shareFiles: ShareFile[]) => Promise<void>,
-): void => {
+export type ShareFileHandler = (fn: Array<ShareFile>) => Promise<void>;
+
+export const recieveSharingIntentInit = (successFn: ShareFileHandler): void => {
   ReceiveSharingIntent.getReceivedFiles(
     (newfiles: Array<ShareFile>) => {
       // files returns as JSON Array example
       //[{ filePath: null, text: null, weblink: null, mimeType: null, contentUri: null, fileName: null, extension: null }]
-      success(newfiles);
+      successFn(newfiles);
     },
     (_: any) => {
       console.log('No file received');

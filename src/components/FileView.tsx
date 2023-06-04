@@ -46,7 +46,7 @@ export default function FileView() {
     filepath: string,
     filename: string,
     filetype: string,
-  ): Promise<void> => {
+  ) => {
     const conversionUrl = `${DEV_API_URL}/convert-file`;
     const downloadPath = `${AUDIOBOOKSPATH}/${filename}.mp3`;
     setLoading(true);
@@ -65,7 +65,7 @@ export default function FileView() {
     console.log(`Downloaded file to: ${res.path()}`);
   };
 
-  const convertUrl = async (url: string): Promise<void> => {
+  const convertUrl = async (url: string) => {
     const conversionUrl = `${DEV_API_URL}/convert-url`;
     let formattedUrl = url.replace(/^(https?:\/\/)?(www\.)?/, '');
     // Replace slashes with hyphens
@@ -97,8 +97,8 @@ export default function FileView() {
         else if (intentData.filePath)
           await convertFile(
             intentData.filePath,
-            intentData.fileName || 'Unknown',
-            intentData.mimeType || '',
+            intentData.fileName ?? 'Unknown',
+            intentData.mimeType ?? '',
           );
         await readAudiobooksDir(AUDIOBOOKSPATH, fileOrder);
       } catch (err) {
@@ -165,7 +165,7 @@ export default function FileView() {
       const resp: DocumentPickerResponse = await DocumentPicker.pickSingle({
         type: MIMETYPES,
       });
-      await convertFile(resp.uri, resp.name || 'Unknown', resp.type || '');
+      await convertFile(resp.uri, resp.name ?? 'Unknown', resp.type ?? '');
       await readAudiobooksDir(AUDIOBOOKSPATH, fileOrder);
     } catch (_) {
       console.log('cancelled');

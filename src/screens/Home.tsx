@@ -32,7 +32,7 @@ const styles = StyleSheet.create({
     fontSize: 30,
   },
   filesView: {
-    marginTop: 10,
+    marginTop: 15,
     marginLeft: 10,
     marginRight: 10,
     flex: 9,

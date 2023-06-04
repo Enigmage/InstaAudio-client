@@ -11,13 +11,13 @@ export default function AppTitle(): JSX.Element {
         }}>
         InstaAudio
       </Text>
-      <Text
+      {/*<Text
         variant="labelMedium"
         style={{
           color: colors.secondary,
         }}>
         Instant Audio Summaries
-      </Text>
+      </Text>*/}
     </>
   );
 }

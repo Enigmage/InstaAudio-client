@@ -11,7 +11,7 @@ import {
   TextInput,
   Button,
 } from 'react-native-paper';
-import { getFileName, bytesToKB } from '../utils';
+import { getFileName, bytesToKB, dateFormatter } from '../utils';
 import { ReadDirItem } from 'react-native-fs';
 
 export interface FileCardProps {
@@ -80,11 +80,17 @@ export default function FileCard({
   return (
     <>
       <Card mode="elevated">
-        <Card.Title title="Audio" left={LeftContent} right={RightContent} />
+        <Card.Title
+          title={getFileName(item.name)}
+          left={LeftContent}
+          right={RightContent}
+        />
         <Card.Content>
-          <PaperText variant="titleMedium">{getFileName(item.name)}</PaperText>
-          <PaperText variant="bodySmall">{item.mtime?.toString()}</PaperText>
-          <PaperText variant="bodySmall">{bytesToKB(item.size)}</PaperText>
+          <PaperText variant="bodyMedium">Summary</PaperText>
+          <PaperText variant="bodyMedium">
+            {dateFormatter(item.mtime ?? new Date())}
+          </PaperText>
+          <PaperText variant="bodyMedium">{bytesToKB(item.size)}</PaperText>
         </Card.Content>
         <Card.Actions>
           <IconButton

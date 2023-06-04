@@ -16,6 +16,19 @@ export const getFileName = (filename: string) => {
   return fsplit.join('.');
 };
 
+export const dateFormatter = (date: Date) => {
+  const options = {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: 'numeric',
+    second: 'numeric',
+  };
+  return date.toLocaleString('en-IN', options as Intl.DateTimeFormatOptions);
+};
+
 export const sortByMtime =
   (sortOrder: 'asc' | 'desc') => (a: ReadDirItem, b: ReadDirItem) => {
     const dA = new Date(`${a.mtime}`).valueOf();
