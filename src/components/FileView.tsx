@@ -15,6 +15,8 @@ import FileCard from './FileCard';
 import BottomBar from './BottomBar';
 import { sortByMtime } from '../utils';
 
+// Renders the Files from the document directory
+// Provides buttons for sorting and adding files
 export default function FileView() {
   // console.log('re-rendering fileview');
   const [fileView, setFileView] = useState<Array<ReadDirItem>>([]);

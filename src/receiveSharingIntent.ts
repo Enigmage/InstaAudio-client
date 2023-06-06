@@ -10,7 +10,7 @@ export interface ShareFile {
   extension?: string;
 }
 
-export type ShareFileHandler = (fn: Array<ShareFile>) => Promise<void>;
+export type ShareFileHandler = (files: Array<ShareFile>) => Promise<void>;
 
 export const recieveSharingIntentInit = (successFn: ShareFileHandler): void => {
   ReceiveSharingIntent.getReceivedFiles(
