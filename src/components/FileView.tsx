@@ -162,7 +162,7 @@ export default function FileView() {
     }
   };
 
-  const handleConvertButton = async () => {
+  const handleFileConvertBtn = async () => {
     try {
       const resp: DocumentPickerResponse = await DocumentPicker.pickSingle({
         type: MIMETYPES,
@@ -171,6 +171,14 @@ export default function FileView() {
       await readAudiobooksDir(AUDIOBOOKSPATH, fileOrder);
     } catch (_) {
       console.log('cancelled');
+    }
+  };
+
+  const handleLinkConvertBtn = async (url: string) => {
+    try {
+      await convertUrl(url);
+    } catch (err) {
+      console.error(err);
     }
   };
 
@@ -207,7 +215,8 @@ export default function FileView() {
       <BottomBar
         sortAscending={sortAscending}
         sortDescending={sortDescending}
-        handleConvertButton={handleConvertButton}
+        handleConvertButton={handleFileConvertBtn}
+        handleLinkConvertBtn={handleLinkConvertBtn}
       />
     </>
   );

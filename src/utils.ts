@@ -29,6 +29,11 @@ export const dateFormatter = (date: Date) => {
   return date.toLocaleString('en-IN', options as Intl.DateTimeFormatOptions);
 };
 
+export const validateURL = (url: string): boolean => {
+  const urlRegex = /^(https?|ftp):\/\/[^\s/$.?#].[^\s]*$/i;
+  return urlRegex.test(url);
+};
+
 export const sortByMtime =
   (sortOrder: 'asc' | 'desc') => (a: ReadDirItem, b: ReadDirItem) => {
     const dA = new Date(`${a.mtime}`).valueOf();
