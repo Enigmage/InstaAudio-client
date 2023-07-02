@@ -9,16 +9,16 @@
 
 ## Screenshots
 
-![Home screen](./assets/ui1.png)
+![Home screen](./assets/ui1.png =250x250)
 
 ---
 
-![Sort menu](./assets/ui-sortmenu.png)
+![Sort menu](./assets/ui-sortmenu.png =250x250)
 
 ---
 
-![Context Menu](./assets/ui-contextMenu.png)
+![Context Menu](./assets/ui-contextMenu.png =250x250)
 
 ---
 
-![Loading screen](./assets/ui-loading.png)
+![Loading screen](./assets/ui-loading.png =250x250)
