@@ -9,16 +9,16 @@
 
 ## Screenshots
 
-![Home screen](./assets/ui1.png =250x250)
+<img src="./assets/ui1.png" alt="Home screen" width="100" height="300">
 
 ---
 
-![Sort menu](./assets/ui-sortmenu.png =250x250)
+<img src="./assets/ui-sortmenu.png" alt="Sort Menu" width="100" height="300">
 
 ---
 
-![Context Menu](./assets/ui-contextMenu.png =250x250)
+<img src="./assets/ui-contextMenu.png" alt="Context Menu" width="100" height="300">
 
 ---
 
-![Loading screen](./assets/ui-loading.png =250x250)
+<img src="./assets/ui-loading.png" alt="Loading screen" width="100" height="300">
